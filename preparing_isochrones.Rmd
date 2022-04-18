@@ -1,0 +1,155 @@
+---
+title: "Untitled"
+description: |
+  A new article created using the Distill format.
+author:
+  - name: Nora Jones 
+    url: https://example.com/norajones
+    affiliation: Spacely Sprockets
+    affiliation_url: https://example.com/spacelysprokets
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library(sf)
+library(openrouteservice)
+library(tidyverse)
+library(tmap)
+```
+
+```{r}
+origins <- st_read("data/network_redesign_travel_time_map_locations.geojson")
+tmap_mode("view")
+tm_shape(origins) +
+  tm_dots()
+
+create_iso <- function(location, profile_1 = "e-bike", range_1){
+  print(range_1)
+  iso <- ors_isochrones(locations = st_coordinates(location), 
+                                 profile = ors_profile(mode = profile_1),
+                                 range = range_1,
+                       output = "sf")
+  iso$geometry
+}
+
+
+
+as.data.frame(origins_2[1:2,]) %>% 
+  mutate(iso = ors_isochrones(locations = st_coordinates(geometry), 
+                                 #profile = ors_profile(mode = bike_type),
+                                 range = time,
+                       output = "sf"))
+
+
+origins_2[1,] %>% 
+  mutate(iso = create_iso(geometry, bike_type, time))
+
+
+# maybe mutate is not the right thing for this. Could try map somehow? But mutate should work!!!
+# so the error has to 
+
+# let's try with map and see where we get
+map_dfr(1:nrow(origins_2), ~create_iso(origins_2[.,]))
+
+library(sf)
+library(dplyr)
+library(openrouteservice)
+dd <- data.frame(x = c(-89.33044, -89.33044, -89.33044, -89.33044, -89.55, -89.55, -89.55, -89.55),
+                 y = c(43.12018, 43.12018, 43.12018, 43.12018, 43.12019, 43.12019, 43.12019, 43.12019),
+                 bike_type = c("bike", "bike", "e-bike", "e-bike", "bike", "bike", "e-bike", "e-bike"),
+                 time = c(300, 600, 300, 600, 300, 600, 300, 600))
+
+df <- st_as_sf(dd, coords = c("x","y"))
+df
+
+create_iso <- function(location, profile_1 = "e-bike", range_1){
+  print(range_1)
+  iso <- ors_isochrones(locations = st_coordinates(location), 
+                                 profile = ors_profile(mode = profile_1),
+                                 range = range_1,
+                       output = "sf")
+  iso$geometry
+}
+
+x <- apply(df, MARGIN = 1, function(r){
+  r$iso <- create_iso(r$geometry, r$bike_type, r$time)
+})
+
+x <- df[4:7,]  %>% 
+  mutate(iso = create_iso(geometry, bike_type, time))
+tm_shape(x[2,]$iso) +
+  tm_polygons()
+
+dd <- data.frame(x = c(-89.33044, -89.33044, -89.33044, -89.33044, -89.33045, -89.33045, -89.33045, -89.33045),
+                 y = c(43.12018, 43.12018, 43.12018, 43.12018, 43.12019, 43.12019, 43.12019, 43.12019),
+                 bike_type = c("bike", "bike", "e-bike", "e-bike", "bike", "bike", "e-bike", "e-bike"),
+                 time = c(300, 600, 300, 600, 300, 600, 300, 600))
+
+df <- st_as_sf(dd, coords = c("x","y"))
+df
+
+
+sf <- sf::st_as_sf(dd, coords = c("x","y"))
+sf
+
+```
+
+What I want my output dataframe to look like:
+
+```{r}
+origins_2 <- origins %>% 
+  mutate(mode_ebike = "e-bike", mode_bike = "bike", time_15 = 900, time_30 = 1800, time_45 = 2700) %>% 
+  pivot_longer(starts_with("mode"), names_to = "mode_var", values_to = "bike_type") %>% pivot_longer(starts_with("time_"), names_to = "time_var", values_to = "time") %>% 
+  select(-c(mode_var, time_var, id))
+
+```
+```{r}
+bike_isochrones <- origins_2 %>% 
+  rowwise() %>% 
+  mutate(iso = create_iso(geometry, bike_type, time))
+
+bike_isochrones2 <- st_set_geometry(bike_isochrones, iso)
+
+tmap_mode("view")
+tmap_options(check.and.fix = TRUE)
+bike_isochrones %>% 
+  mutate(time = as.factor(time)) %>% 
+  filter(bike_type == "bike") %>% 
+  st_set_geometry(., "iso") %>% 
+  tm_shape() +
+  tm_polygons(col = "time", alpha = .2) +
+  tm_facets(by = "name", sync = T)
+```
+
+
+
+```{r download-maps}
+library(magick)
+download.file("https://madison.legistar.com/View.ashx?M=F&ID=10441390&GUID=ECA1CC37-55E7-48B3-9B26-37D4A6ADF11C", destfile = "data/travel_time_maps.pdf", mode = "wb")
+download.file("https://www.cityofmadison.com/metro/documents/network-redesign/AdditionalIsochrones.pdf",
+              destfile = "data/additional_travel_time_maps.pdf")
+```
+
+```{r}
+magick::image_read_pdf("data/travel_time_maps.pdf")
+
+read_page <- function(page){
+  p <- image_read_pdf("data/travel_time_maps.pdf", pages = page, density = 600)
+   location <- p %>% image_crop(geometry = "2400x200+60+385") %>% 
+   image_ocr()
+   path_name = paste0(str_sub(location, end = -2), ".png")
+   image_write(p, path = path_name)
+}
+read_page(2)
+library(pdftools)
+map(2:pdf_info("data/travel_time_maps.pdf")$pages, read_page)
+
+```
+
+
+
