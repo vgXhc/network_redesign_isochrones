@@ -113,7 +113,8 @@ bike_isochrones <- origins_2 %>%
   rowwise() %>% 
   mutate(iso = create_iso(geometry, bike_type, time))
 
-bike_isochrones2 <- st_set_geometry(bike_isochrones, iso)
+
+saveRDS(bike_isochrones, file = "how-far-can-you-go/data/bike_isochrones.RDS")
 
 tmap_mode("view")
 tmap_options(check.and.fix = TRUE)
