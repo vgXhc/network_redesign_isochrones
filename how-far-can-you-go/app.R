@@ -1,12 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 library(dplyr)
 library(sf)
@@ -19,12 +10,12 @@ start_points <- bike_isochrones
 bike_isochrones <- bike_isochrones %>% 
   mutate(time_formatted = as.factor(paste0(time/60, " minutes"))) %>% 
   st_set_geometry(., "iso") %>% 
-  st_make_valid()
+  st_make_valid() #some isochrones have geometry issues that tmap doesn't like
 
 #set map marker icon
 tmapIcon <- tmap_icons("https://raw.githubusercontent.com/Rush/Font-Awesome-SVG-PNG/master/black/png/48/map-marker.png")
 
-
+#list of start locations for the pulldown menu in the UI
 start_locations <- bike_isochrones %>%
   st_drop_geometry() %>% 
   distinct(name) %>% 
@@ -120,8 +111,8 @@ server <- function(input, output, session) {
                   title = "Riding time",
                   alpha = .2) +
     tm_basemap(leaflet::providers$Stamen.TonerLite) +
-      tm_scale_bar() +
-      tm_view(set.view = 12) +
+      tm_scale_bar() + #scale bar to make comparisons easier
+      tm_view(set.view = 12) + #initial zoom level to be similar to bus map
       tm_shape(start_points %>% filter(bike_type == input$mode_input & name == input$location_input)) +
       tm_symbols(shape = tmapIcon)
   }
