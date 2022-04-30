@@ -113,8 +113,11 @@ bike_isochrones <- origins_2 %>%
   rowwise() %>% 
   mutate(iso = create_iso(geometry, bike_type, time))
 
+bike_isochrones2 <- bike_isochrones %>% 
+  mutate(name = case_when(name == "Atwood Dunning" ~ "Atwood at Dunning",
+                          T ~ name))
 
-saveRDS(bike_isochrones, file = "how-far-can-you-go/data/bike_isochrones.RDS")
+saveRDS(bike_isochrones2, file = "how-far-can-you-go/data/bike_isochrones.RDS")
 
 tmap_mode("view")
 tmap_options(check.and.fix = TRUE)
@@ -139,8 +142,8 @@ download.file("https://www.cityofmadison.com/metro/documents/network-redesign/Ad
 ```{r}
 magick::image_read_pdf("data/travel_time_maps.pdf")
 
-read_page <- function(page){
-  p <- image_read_pdf("data/travel_time_maps.pdf", pages = page, density = 600)
+read_page <- function(page, pdf_name){
+  p <- image_read_pdf(pdf_name, pages = page, density = 600)
    location <- p %>% image_crop(geometry = "2400x200+60+385") %>% 
    image_ocr()
    path_name = paste0(str_sub(location, end = -2), ".png")
@@ -149,6 +152,8 @@ read_page <- function(page){
 read_page(2)
 library(pdftools)
 map(2:pdf_info("data/travel_time_maps.pdf")$pages, read_page)
+
+map(1:pdf_info("data/AdditionalIsochrones.pdf")$pages, ~ read_page(page = ., pdf_name = "data/AdditionalIsochrones.pdf"))
 
 ```
 
